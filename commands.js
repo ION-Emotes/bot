@@ -27,7 +27,7 @@ module.exports = [
 			.addStringOption(option =>
 				option
 					.setName('emote')
-					.setDescription('The emoji to add')
+					.setDescription('The emoji to add (or "all" to add all emojis)')
 					.setRequired(true)),
 
 		/**
@@ -61,7 +61,7 @@ module.exports = [
 			.addStringOption(option =>
 				option
 					.setName('emote')
-					.setDescription('The emoji to add')
+					.setDescription('The emoji to remove (or "all" to add all emojis)')
 					.setRequired(true)),
 
 		/**
