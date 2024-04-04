@@ -1,7 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction } = require('discord.js');
 const { add, rem } = require('./ghpload.js');
-
-const reply = (interaction, toSend) => interaction.editReply(toSend).catch((_) => interaction.channel.send(toSend));
+const {reply} = require('./helpers.js');
 
 
 module.exports = [
@@ -37,6 +36,8 @@ module.exports = [
 		async execute(client, interaction) {
 			// <a:pink_Nodders:937079880473014362>
 			const reason = interaction.options.getString('emote') || null;
+			if (!reason || (reason.split(":").length < 2 && reason !== "all")) return reply(interaction, {content: `"${reason}" is not a valid emoji!`, ephemeral: true});
+			
 			const emotes = (reason === "all") ? Array.from((await interaction.guild.emojis.fetch()).values()) : [(await interaction.guild.emojis.fetch()).get(reason.split(":")[2].replace(">", ""))];
 
 			if (!emotes[0]) return reply(interaction, { content: "Not Found!", ephemeral: true });
@@ -68,6 +69,8 @@ module.exports = [
 		 */
 		async execute(client, interaction) {
 			const reason = interaction.options.getString('emote') || null;
+			if (!reason || (reason.split(":").length < 2 && reason !== "all")) return reply(interaction, {content: `"${reason}" is not a valid emoji!`, ephemeral: true});
+
 			const emotes = (reason === "all") ? Array.from((await interaction.guild.emojis.fetch()).values()) : [(await interaction.guild.emojis.fetch()).get(reason.split(":")[2].replace(">", ""))];
 
 			if (!emotes[0]) return reply(interaction, { content: "Not Found!", ephemeral: true });

@@ -27,15 +27,19 @@ async function updateJsonFile(path, newData, serverId, toDel = null) {
         let json = JSON.parse(content);
 
         const r = [];
+        let changed = false;
         if (toDel) {
             const testReg = (inp, key) => {
-                const pattern = new RegExp(`^${inp}_\\d+$`);
+                const pattern = new RegExp(`^${inp}(_\\d+)?$`);
                 return pattern.test(key);
             }
             const delMatches = (inp) => {
                 try {
                     for (const key in json) {
-                        if (testReg(inp, key) || json[key].serverId === newData[inp].serverId) delete json[key];
+                        if (testReg(inp, key) && json[key].serverId === newData[inp].serverId && json[key].id === newData[inp].id) {
+                            delete json[key];
+                            changed = true;
+                        }
                     }
                     return true;
                 }
@@ -48,6 +52,8 @@ async function updateJsonFile(path, newData, serverId, toDel = null) {
             for (const key in newData) {
                 r.push({key, deleted: delMatches(key)});
             }
+
+            if (!changed) return r.map(o => ({key: o.key, deleted: false}));
         }
         else {
             for (const key in newData) {

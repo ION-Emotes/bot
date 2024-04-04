@@ -1,5 +1,7 @@
 // copied from https://github.com/ION-Emotes/plugin/blob/main/getEmotes.js
 
+const reply = (interaction, toSend) => interaction.editReply(toSend).catch((_) => interaction.channel.send(toSend));
+
 async function handleCollisions(data) {
     const o = {};
 
@@ -47,4 +49,4 @@ function groupByFirstLetterOfKey(items) {
     return grouped;
 }
 
-module.exports = {groupByFirstLetterOfKey, handleCollisions};
+module.exports = {groupByFirstLetterOfKey, handleCollisions, reply};
