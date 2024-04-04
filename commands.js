@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction } = require('discord.js');
 const { add, rem } = require('./ghpload.js');
 
-const reply = (interaction, toSend) => interaction.reply(toSend).catch(err => interaction.channel.send);
+const reply = (interaction, toSend) => interaction.editReply(toSend).catch((_) => interaction.channel.send(toSend));
 
 
 module.exports = [

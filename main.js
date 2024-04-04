@@ -50,7 +50,8 @@ client.on(Events.InteractionCreate, async interaction => {
 	if (!interaction.isChatInputCommand()) return;
 
 	try {
-		// console.log(interaction);
+		await interaction.deferReply({ ephemeral: true });
+		
 		const command = client.commands.get(interaction.commandName);
 		if (!command) interaction.reply({ content: "unknown command!", ephemeral: true });
 		else client.commands.get(interaction.commandName)(client, interaction);
