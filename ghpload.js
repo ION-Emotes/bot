@@ -4,40 +4,15 @@ if (!ghtoken) throw "NO GITHUB TOKEN FOUND!";
 
 const axios = require('axios');
 const base64 = require('base-64');
-
-async function handleCollisions(data) {
-    const o = {};
-
-    for (const obj of data) {
-        let { name } = obj;
-        let i = 0;
-        name = name.toLowerCase();
-
-        // get the corresponding file in the db
-        const res = await fetch(`https://raw.githubusercontent.com/ION-Emotes/data/main/data/${name[0]}.json`);
-        const data = await res.json();
-        const keys = Object.keys(data);
-
-        if (name in o || keys.find((eName) => (eName == name))) {
-            while (`${name}_${i}` in o) { i++; }
-            name += `_${i}`;
-        }
-
-        const nOld = obj.name;
-        delete obj.name;
-        obj.oldName = nOld;
-        o[name] = obj;
-    }
-
-    return o;
-}
+const { handleCollisions, groupByFirstLetterOfKey } = require('./helpers');
 
 
 /**
- * @param {{serverId: String, key: String}} delObj 
+ * @param {{serverId: String, key: String}[]} delObj 
  * @returns 
  */
-async function updateJsonFile(path, newData, delObj = null) {
+async function updateJsonFile(path, newData, serverId, toDel = null) {
+    if (!newData) return null;
     const url = `https://api.github.com/repos/ION-Emotes/data/contents/${path}`;
 
     try {
@@ -51,18 +26,42 @@ async function updateJsonFile(path, newData, delObj = null) {
 
         let json = JSON.parse(content);
 
-        if (delObj) {
-            if (json[delObj.key].serverId !== delObj.serverId) return null;
-            delete json[delObj.key];
+        const r = [];
+        if (toDel) {
+            const testReg = (inp, key) => {
+                const pattern = new RegExp(`^${inp}_\\d+$`);
+                return pattern.test(key);
+            }
+            const delMatches = (inp) => {
+                try {
+                    for (const key in json) {
+                        if (testReg(inp, key) || json[key].serverId === newData[inp].serverId) delete json[key];
+                    }
+                    return true;
+                }
+                catch(err) {
+                    console.error(err);
+                    return false;
+                }
+            }
+
+            for (const key in newData) {
+                r.push({key, deleted: delMatches(key)});
+            }
         }
-        else json[newData.key] = newData.val;
+        else {
+            for (const key in newData) {
+                json[key] = newData[key];
+                r.push({key, added: true});
+            }
+        }
 
         // Convert the modified JSON back to a string and then to base64
         const newContent = base64.encode(JSON.stringify(json));
 
         // Prepare the commit
         const updateData = {
-            message: `Update emote for ${url} via bot`,
+            message: `Update emote for ${serverId} via bot`,
             content: newContent,
             sha: response.data.sha // SHA of the file you're replacing, to ensure you're updating the right version
         };
@@ -72,7 +71,7 @@ async function updateJsonFile(path, newData, delObj = null) {
             headers: { 'Authorization': `token ${ghtoken}` }
         });
 
-        return {fpath: updateResponse.data.content.html_url};
+        return r; //{fpath: updateResponse.data.content.html_url};
     } catch (err) {
         console.error(err);
         return null;
@@ -80,25 +79,40 @@ async function updateJsonFile(path, newData, delObj = null) {
 }
 
 
-async function add(newData) {
-    const dataNew = Object.entries(await handleCollisions(newData));
+async function add(newData, serverId) {
     const r = [];
 
-    for (const [key, val] of dataNew) {
-        const path = `data/${key[0]}.json`;
-        r.push(await updateJsonFile(path, {key, val}));
+    try {
+        const dataNew = Object.entries(groupByFirstLetterOfKey(await handleCollisions(newData)));
+    
+        for (const [key, val] of dataNew) {
+            const path = `data/${key}.json`;
+            r.push(...(await updateJsonFile(path, val, serverId)));
+        }
+        return r;
     }
-    return r;
+    catch(err) {
+        console.error(err);
+    }
 }
 
 
-async function rem(toRem) {
+async function rem(toRem, serverId) {
     const r = [];
-    for (const {key, serverId} of toRem) {
-        const path = `data/${key[0]}.json`;
-        r.push(await updateJsonFile(path, null, {key: key, serverId}));
+    try {
+        // formatting
+        const formatted =  Object.fromEntries(toRem.map(o => [o.name, o]));
+        const grouped = Object.entries(groupByFirstLetterOfKey(formatted));
+
+        for (const [key, val] of grouped) {
+            const path = `data/${key}.json`;
+            r.push(...(await updateJsonFile(path, val, serverId, true)));
+        }
     }
-    return r;
+    catch(err) {
+        console.error(err);
+    }
+    return r
 }
 
 

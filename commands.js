@@ -42,7 +42,8 @@ module.exports = [
 			if (!emotes[0]) return reply(interaction, { content: "Not Found!", ephemeral: true });
 			const formatted = emotes.map((em) => ({ id: em.id, name: em.name, animated: em.animated, serverId: interaction.guild.id }));
 
-			const r = await add(formatted);
+			const rRaw = await add(formatted, interaction.guildId);
+			const r = (rRaw) ? rRaw.map(em => em.added) : (new Array(formatted.length)).fill(null)
 			reply(interaction, {
 				content: `Added: \`\`\`\n${r.map((emote, i) => {
 					return `${(emote) ? '✅' : '❌'} ${emotes[i].name} (${emotes[i].id})\n`;
@@ -70,13 +71,15 @@ module.exports = [
 			const emotes = (reason === "all") ? Array.from((await interaction.guild.emojis.fetch()).values()) : [(await interaction.guild.emojis.fetch()).get(reason.split(":")[2].replace(">", ""))];
 
 			if (!emotes[0]) return reply(interaction, { content: "Not Found!", ephemeral: true });
-			const formatted = emotes.map((em) => ({ key: em.name, serverId: interaction.guild.id }));
+			const formatted = emotes.map((em) => ({ id: em.id, name: em.name, serverId: interaction.guild.id }));
 
-			const r = await rem(formatted);
+			const rRaw = await rem(formatted, interaction.guildId);
+			const r = (rRaw) ? rRaw.map(em => em.deleted) : (new Array(formatted.length)).fill(null)
+
 			reply(interaction, {
 				content: `Removed: \`\`\`\n${r.map((emote, i) => {
-					return `${(emote) ? '✅' : '❌'} ${emotes[i].name} (${emotes[i].id})\n`;
-				})}\n\`\`\``, ephemeral: true
+					return `${(emote) ? '✅' : '❌'} ${emotes[i].name} (${emotes[i].id})`;
+				}).join("\n")}\`\`\``, ephemeral: true
 			});
 		}
 	}
