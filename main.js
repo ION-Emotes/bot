@@ -15,10 +15,10 @@ client.once(Events.ClientReady, (readyClient) => {
 	});
 });
 
-client.on("guildCreate", (guildObj) => {
+client.on("guildCreate", async (guildObj) => {
 	try {
-		const owner = guildObj.members.cache.find(o => (o.id === guildObj.ownerId));
-		owner.send("Thank you for inviting ION Emote Bot!\nPlease use the `/add` command to add emotes or `/remove` to remove them");
+		const owner = await guildObj.fetchOwner();
+		owner.send("Thank you for inviting ION Emote Bot!\nPlease use the `/add` command to add emotes or `/remove` to remove them\nTo learn how to use the plugin, you can visit https://streamelements.ion606.com/howto.html");
 	}
 	catch(err) {
 		console.error(err);
