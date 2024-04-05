@@ -13,6 +13,7 @@ client.once(Events.ClientReady, (readyClient) => {
 		// client.guilds.cache.get(guild.id).emojis.cache.map((em) => ({id: em.id, name: em.name, animated: em.animated, serverId: null}));
 		registerCommands(guild.id);
 	});
+	console.log("finished refreshing commands!");
 });
 
 client.on("guildCreate", async (guildObj) => {
@@ -28,7 +29,7 @@ client.on("guildCreate", async (guildObj) => {
 const rest = new REST().setToken(token);
 async function registerCommands(guildId) {
 	try {
-		console.log(`Started refreshing ${commands.length} application (/) commands.`);
+		// console.log(`Started refreshing ${commands.length} application (/) commands.`);
 
 		// The put method is used to fully refresh all commands in the guild with the current set
 		const data = await rest.put(
@@ -36,7 +37,7 @@ async function registerCommands(guildId) {
 			{ body: commands.map(c => c.data.toJSON()) },
 		);
 
-		console.log(`Successfully reloaded ${data.length} application (/) commands.`);
+		// console.log(`Successfully reloaded ${data.length} application (/) commands.`);
 	} catch (error) {
 		// And of course, make sure you catch and log any errors!
 		console.error(error);
@@ -54,7 +55,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 		await interaction.deferReply({ ephemeral: true });
 		
 		const command = client.commands.get(interaction.commandName);
-		if (!command) interaction.reply({ content: "unknown command!", ephemeral: true });
+		if (!command) reply(interaction, { content: "unknown command!", ephemeral: true });
 		else client.commands.get(interaction.commandName)(client, interaction);
 	} catch (error) {
 		console.error(error);

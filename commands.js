@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction } = require('discord.js');
-const { add, rem } = require('./ghpload.js');
+const { add, rem, getBranch } = require('./ghpload.js');
 const {reply} = require('./helpers.js');
 
 
@@ -84,6 +84,23 @@ module.exports = [
 					return `${(emote) ? '✅' : '❌'} ${emotes[i].name} (${emotes[i].id})`;
 				}).join("\n")}\`\`\``, ephemeral: true
 			});
+		}
+	},
+
+	{
+		data: new SlashCommandBuilder()
+			.setName("getpr")
+			.setDescription("find your server's current PR (if it exists)")
+			.setDefaultMemberPermissions(PermissionFlagsBits.SendMessages),
+
+		/**
+		 * @param {ChatInputCommandInteraction} interaction 
+		 */
+		async execute(client, interaction) {
+			const baseURL = 'https://api.github.com/repos/ION-Emotes/data/pulls';
+			const r = await getBranch(baseURL, interaction.guildId, true);
+			if (!r) reply(interaction, "No branch or PR found!");
+			else reply(interaction, `PR found at ${r}`);
 		}
 	}
 ]
