@@ -5,7 +5,7 @@ if (!ghtoken) throw "NO GITHUB TOKEN FOUND!";
 const axios = require('axios');
 const base64 = require('base-64');
 const { handleCollisions, groupByFirstLetterOfKey, checkNSFW } = require('./helpers');
-const getCDNLink = (id, animated) => `https://cdn.discordapp.com/emojis/${id}.${animated ? "gif" : "webp"}?size=48&quality=lossless`;
+const getCDNLink = (id, animated) => `https://cdn.discordapp.com/emojis/${id}.${animated ? "gif" : "webp"}`;
 
 
 const getPR = async (baseURL, serverId, retHTMLURL = false) => {
@@ -22,7 +22,7 @@ const getPR = async (baseURL, serverId, retHTMLURL = false) => {
         if (response.data.length > 0) return (retHTMLURL) ? response.data[0].html_url : response.data[0].url;
         return null;
     }
-    catch(err) {
+    catch (err) {
         console.error(err);
         return null;
     }
@@ -46,14 +46,14 @@ async function createOrUpdateBranch(baseURL, branchName, baseBranch = 'main') {
         await axios.get(`${baseURL}/branches/${branchName}`, {
             headers: { 'Authorization': `token ${ghtoken}` }
         })
-        .catch(async (err) => {
-            return await axios.post(`${baseURL}/git/refs`, {
-                ref: `refs/heads/${branchName}`,
-                sha: baseSha
-            }, {
-                headers: { 'Authorization': `token ${ghtoken}` }
-            }).catch(console.error);
-        });
+            .catch(async (err) => {
+                return await axios.post(`${baseURL}/git/refs`, {
+                    ref: `refs/heads/${branchName}`,
+                    sha: baseSha
+                }, {
+                    headers: { 'Authorization': `token ${ghtoken}` }
+                }).catch(console.error);
+            });
 
         // Check if the feature branch is up-to-date with main
         const featureBranchResponse = await axios.get(`${baseURL}/branches/${branchName}`, {
@@ -161,8 +161,8 @@ async function updateJsonFile(path, newData, serverId, toDel = null) {
             const serverId = Object.values(newData)[0].serverId;
             const newBranchName = `add-${serverId}`;
 
-           const rebased = await createOrUpdateBranch(baseURL, newBranchName);
-           if (!rebased) return null;
+            const rebased = await createOrUpdateBranch(baseURL, newBranchName);
+            if (!rebased) return null;
 
             const newContent = base64.encode(JSON.stringify(json));
             await axios.put(`${url}`, {
@@ -176,16 +176,18 @@ async function updateJsonFile(path, newData, serverId, toDel = null) {
                 console.error(err);
             });
 
-            const prResponse = await axios.post(`${baseURL}/pulls`, {
-                title: `Update emote for ${serverId}`,
-                head: newBranchName,
-                base: 'main',
-                body: `submitted for server ${serverId} emotes \`\`\`\n${r.filter(e => e.added).map(e => e.key).join(', ')}\`\`\`\n`,
-                // sha: branchResponse.data.sha
-            }, {
-                headers: { 'Authorization': `token ${ghtoken}`, "Accept": "application/vnd.github+json" }
-            });
-
+            if (!await getPR(baseURL, serverId, true)) {
+                const prResponse = await axios.post(`${baseURL}/pulls`, {
+                    title: `Update emote for ${serverId}`,
+                    head: newBranchName,
+                    base: 'main',
+                    body: `submitted for server ${serverId} emotes \`\`\`\n${r.filter(e => e.added).map(e => e.key).join(', ')}\`\`\`\n`,
+                    // sha: branchResponse.data.sha
+                }, {
+                    headers: { 'Authorization': `token ${ghtoken}`, "Accept": "application/vnd.github+json" }
+                })
+                .catch(_ => {});
+            }
             // console.log({ pullRequestUrl: prResponse.data.html_url });
         }
 
@@ -206,20 +208,25 @@ async function add(newData, serverId) {
 
     // maybe DM the person who sent the interaction or smth?
     const failed = checked.filter(o => !o[1].passed);
-
     const succeeded = checked.filter(o => o[1].passed).map(o => o[0]);
 
     try {
-        const dataNew = Object.entries(groupByFirstLetterOfKey(await handleCollisions(newData)));
+        const dataNew = Object.entries(groupByFirstLetterOfKey(await handleCollisions(succeeded)));
 
         for (const [key, val] of dataNew) {
-            const path = `data/${key}.json`;
-            r.push(...(await updateJsonFile(path, val, serverId)));
+            try {
+                const path = `data/${key}.json`;
+                r.push(...(await updateJsonFile(path, val, serverId)));
+            }
+            catch (err) {
+
+            }
         }
-        return r;
+        return { succeeded: r, failed };
     }
     catch (err) {
         console.error(err);
+        return null;
     }
 }
 

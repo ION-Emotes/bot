@@ -44,11 +44,22 @@ module.exports = [
 			const formatted = emotes.map((em) => ({ id: em.id, name: em.name, animated: em.animated, serverId: interaction.guild.id }));
 
 			const rRaw = await add(formatted, interaction.guildId);
-			const r = (rRaw) ? rRaw.map(em => em.added) : (new Array(formatted.length)).fill(null)
+			let r;
+			if (rRaw) {
+				const passed = rRaw.succeeded.filter(e => e[1].added).map(e => formatted.findIndex(e2 => e2.name === e.key));
+				const failed = rRaw.succeeded.filter(e => !e[1].added).concat(rRaw.failed).map(e => formatted.findIndex(e2 => e2.name === e[0].name));
+				r = failed.map((i) => {
+					return `❌ ${emotes[i].name} (${emotes[i].id})\n`;
+				});
+				
+				r = r.concat(passed.map((i) => {
+					return `✅ ${emotes[i].name} (${emotes[i].id})\n`;
+				}));
+			}
+			else r = (new Array(formatted.length)).fill(null);
+
 			reply(interaction, {
-				content: `Added: \`\`\`\n${r.map((emote, i) => {
-					return `${(emote) ? '✅' : '❌'} ${emotes[i].name} (${emotes[i].id})\n`;
-				})}\n\`\`\``, ephemeral: true
+				content: `Added: \`\`\`\n${r}\n\`\`\``, ephemeral: true
 			});
 		}
 	},
