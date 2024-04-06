@@ -166,7 +166,8 @@ async function checkNSFW(imgURLRaw) {
         const predictions = await model.classify(batchedImgTensor);
         // console.log("Predictions: ", predictions);
 
-        const detected = predictions.find((o) => (o.probability > 0.5 && o.className != 'Neutral'));
+        const safeClassNames = ['Drawing', 'Neutral']
+        const detected = predictions.find((o) => (o.probability > 0.5 && !safeClassNames.includes(o.className)));
         imgTensor.dispose();
 
         return (detected) ? {passed: false, reason: detected.className} : {passed: true};

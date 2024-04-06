@@ -46,8 +46,8 @@ module.exports = [
 			const rRaw = await add(formatted, interaction.guildId);
 			let r;
 			if (rRaw) {
-				const passed = rRaw.succeeded.filter(e => e[1].added).map(e => formatted.findIndex(e2 => e2.name === e.key));
-				const failed = rRaw.succeeded.filter(e => !e[1].added).concat(rRaw.failed).map(e => formatted.findIndex(e2 => e2.name === e[0].name));
+				const passed = rRaw.succeeded.filter(e => e.added).map(e => formatted.findIndex(e2 => e2.name === e.key));
+				const failed = rRaw.succeeded.filter(e => !e.added).concat(rRaw.failed).map(e => formatted.findIndex(e2 => e2.name === e[0].name));
 				r = failed.map((i) => {
 					return `❌ ${emotes[i].name} (${emotes[i].id})\n`;
 				});

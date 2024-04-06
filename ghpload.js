@@ -72,15 +72,15 @@ async function createOrUpdateBranch(baseURL, branchName, baseBranch = 'main') {
             });
 
             // console.log(`Merged ${baseBranch} into ${branchName}:`, mergeResponse.data);
-            return true;
+            return featureSha;
         } else {
             // console.log(`${branchName} is already up-to-date with ${baseBranch}.`);
-            return true;
+            return featureSha;
         }
     } catch (error) {
         console.error(`MERGE ERROR FOR BRANCH ${branchName}`);
         console.error(err);
-        return false
+        return false;
     }
 }
 
@@ -161,15 +161,20 @@ async function updateJsonFile(path, newData, serverId, toDel = null) {
             const serverId = Object.values(newData)[0].serverId;
             const newBranchName = `add-${serverId}`;
 
-            const rebased = await createOrUpdateBranch(baseURL, newBranchName);
-            if (!rebased) return null;
+            const rNB = await createOrUpdateBranch(baseURL, newBranchName);
+            if (!rNB) return null;
+
+            const pingBranch = await axios.get(`${url}?ref=add-${serverId}`, {
+                headers: { 'Authorization': `token ${ghtoken}` }
+            }).catch(console.error);
+            if (!pingBranch) return null;
 
             const newContent = base64.encode(JSON.stringify(json));
-            await axios.put(`${url}`, {
+            await axios.put(`${url}?ref=add-${serverId}`, {
                 message: `Update emote for ${serverId} via bot`,
                 content: newContent,
                 branch: newBranchName,
-                sha: response.data.sha  //baseSha
+                sha: pingBranch.data.sha  //baseSha
             }, {
                 headers: { 'Authorization': `token ${ghtoken}` }
             }).catch(err => {
@@ -186,7 +191,7 @@ async function updateJsonFile(path, newData, serverId, toDel = null) {
                 }, {
                     headers: { 'Authorization': `token ${ghtoken}`, "Accept": "application/vnd.github+json" }
                 })
-                .catch(_ => {});
+                    .catch(_ => { });
             }
             // console.log({ pullRequestUrl: prResponse.data.html_url });
         }
@@ -215,11 +220,12 @@ async function add(newData, serverId) {
 
         for (const [key, val] of dataNew) {
             try {
-                const path = `data/${key}.json`;
-                r.push(...(await updateJsonFile(path, val, serverId)));
+                const path = `data/${key.toLowerCase()}.json`;
+                const res = await updateJsonFile(path, val, serverId);
+                if (res) r.push(...res);
             }
             catch (err) {
-
+                console.error(err);
             }
         }
         return { succeeded: r, failed };
@@ -239,14 +245,18 @@ async function rem(toRem, serverId) {
         const grouped = Object.entries(groupByFirstLetterOfKey(formatted));
 
         for (const [key, val] of grouped) {
-            const path = `data/${key}.json`;
-            r.push(...(await updateJsonFile(path, val, serverId, true)));
+            try {
+                const path = `data/${key.toLowerCase()}.json`;
+                const res = await updateJsonFile(path, val, serverId, true)
+                if (res) r.push(...res);
+            }
+            catch (err) { console.error(err); }
         }
     }
     catch (err) {
         console.error(err);
     }
-    return r
+    return r;
 }
 
 
